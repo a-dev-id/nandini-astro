@@ -5,9 +5,9 @@ import { urlFor } from '../lib/image.js'
 
 const { videoId: videoIdProp, start: startProp, posterSrc: posterProp } = Astro.props
 
-const videoId = videoIdProp ?? '_5UK8EXcrAY'
-const start   = startProp   ?? 0
-const posterSrc = posterProp ?? '/images/hero-fallback.jpg'
+const videoId   = videoIdProp ?? '_5UK8EXcrAY'
+const start     = startProp   ?? 0
+const posterSrc = posterProp  ?? '/images/hero-fallback.jpg'
 
 let images: {src:string; alt:string}[] = []
 try {
@@ -24,7 +24,7 @@ try {
 ---
 <section class="relative overflow-hidden sm:ml-[calc(50%-50vw)] sm:mr-[calc(50%-50vw)] sm:w-screen">
   <!-- MOBILE: 4:5 image carousel -->
-  <div class="relative block aspect-[4/5] w-full sm:hidden">
+  <div id="mCarousel" class="relative block aspect-[4/5] w-full overflow-hidden sm:hidden">
     <div id="mTrack" class="absolute inset-0 flex h-full w-full transition-transform duration-500 ease-out will-change-transform">
       {images.map((img, i) => (
         <div class="slide h-full w-full shrink-0 basis-full" aria-hidden={i===0 ? "false":"true"}>
@@ -40,14 +40,14 @@ try {
       ))}
     </div>
 
-    <button id="mPrev" aria-label="Previous slide"
-      class="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 backdrop-blur hover:bg-black/60 active:scale-95">
+    <button id="mPrev" type="button" aria-label="Previous slide"
+      class="absolute left-3 top-1/2 z-50 pointer-events-auto -translate-y-1/2 rounded-full bg-black/40 p-2 backdrop-blur hover:bg-black/60 active:scale-95">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
       </svg>
     </button>
-    <button id="mNext" aria-label="Next slide"
-      class="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 backdrop-blur hover:bg-black/60 active:scale-95">
+    <button id="mNext" type="button" aria-label="Next slide"
+      class="absolute right-3 top-1/2 z-50 pointer-events-auto -translate-y-1/2 rounded-full bg-black/40 p-2 backdrop-blur hover:bg-black/60 active:scale-95">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
       </svg>
@@ -57,95 +57,69 @@ try {
     <div class="pointer-events-none absolute inset-x-0 top-0 h-px" style="background: rgba(255,255,255,.15);"></div>
   </div>
 
-<!-- TABLET+ : full-screen background video -->
-<div class="relative hidden h-[100svh] w-screen overflow-hidden sm:block">
-  <!-- Poster (shows while video loads or if autoplay blocked) -->
-  <img
-    src={posterSrc}
-    alt=""
-    loading="eager"
-    fetchpriority="high"
-    decoding="async"
-    class="absolute inset-0 h-full w-full object-cover"
-  />
+  <!-- TABLET+ : full-screen background video -->
+  <div class="relative hidden h-[100svh] w-screen overflow-hidden sm:block">
+    <!-- Poster -->
+    <img
+      src={posterSrc}
+      alt=""
+      loading="eager"
+      fetchpriority="high"
+      decoding="async"
+      class="absolute inset-0 h-full w-full object-cover"
+    />
 
-  <!-- YouTube background -->
-  <iframe
-    class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-    style="
-      width:100vw;            /* base */
-      height:56.25vw;         /* 9/16 of width */
-      min-width:177.78vh;     /* 16/9 of height (cover tall screens) */
-      min-height:100svh;      /* at least viewport height */
-      border:0;
-      pointer-events:none;    /* make it untouchable */
-    "
-    src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${videoId}&start=${start}`}
-    title="Background video"
-    allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-    allowfullscreen
-  ></iframe>
+    <!-- YouTube background -->
+    <iframe
+      class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      style="
+        width:100vw;
+        height:56.25vw;         /* 9/16 of width */
+        min-width:177.78vh;      /* 16/9 of height (cover tall) */
+        min-height:110svh;       /* taller to conceal YT shelf */
+        border:0;
+        pointer-events:none;     /* act like background */
+      "
+      src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${videoId}&start=${start}&iv_load_policy=3&disablekb=1&fs=0`}
+      title="Background video"
+      allow="autoplay; encrypted-media; picture-in-picture"
+      allowfullscreen
+    ></iframe>
 
-  <!-- dark fade under navbar -->
-  <div class="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/55 to-transparent"></div>
-  <div class="pointer-events-none absolute inset-x-0 top-0 h-px" style="background: rgba(255,255,255,.15);"></div>
-</div>
+    <!-- Cover the bottom 'More videos' panel -->
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/60 to-transparent"></div>
 
+    <!-- top band + hairline under navbar -->
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/55 to-transparent"></div>
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-px" style="background: rgba(255,255,255,.15);"></div>
+  </div>
 </section>
-
-<style>
-  /* Make the injected YouTube iframe behave like a background cover */
-  .yt-bg iframe{
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    width:100vw;
-    height:56.25vw;     /* 9/16 of width */
-    min-width:177.78vh; /* 16/9 of height (cover tall) */
-    min-height:100svh;  /* at least viewport height */
-  }
-</style>
 
 <script is:inline>
 document.addEventListener('DOMContentLoaded', () => {
-  /* ---------- Mobile carousel (<=640px) ---------- */
-  // Only bind when the mobile carousel is visible
-  if (window.matchMedia('(min-width: 640px)').matches) return;
-
+  // Always bind (elements exist even if hidden on desktop)
   const track = document.getElementById('mTrack');
   const prev  = document.getElementById('mPrev');
   const next  = document.getElementById('mNext');
   if (!track || !prev || !next) return;
 
-  // Make sure buttons sit above everything and receive clicks
-  [prev, next].forEach((b) => {
-    b.style.zIndex = '50';
-    b.style.pointerEvents = 'auto';
-  });
+  // Ensure buttons receive clicks above any overlays
+  [prev, next].forEach(b => { b.style.zIndex = '50'; b.style.pointerEvents = 'auto'; });
 
-  // Help swipe work consistently
+  // Smooth swipe + transform performance
   track.style.touchAction = 'pan-y';
   track.style.willChange  = 'transform';
 
-  // Compute slides (and re-check after images load, just in case)
-  let slides = track.querySelectorAll('.slide').length;
-  const getSlides = () => (slides = track.querySelectorAll('.slide').length);
-
-  if (slides <= 1) {
-    // nothing to slide
-    prev.style.display = next.style.display = 'none';
-    return;
-  }
+  const slidesEls = Array.from(track.querySelectorAll('.slide'));
+  const slides = slidesEls.length;
+  if (slides <= 1) { prev.style.display = next.style.display = 'none'; return; }
 
   let index = 0;
   const clamp  = (i) => (i + slides) % slides;
-  const render = () => {
-    track.style.transform = `translateX(-${index * 100}%)`;
-  };
+  const render = () => { track.style.transform = `translateX(-${index * 100}%)`; };
 
-  const goPrev = (e) => { e?.preventDefault(); index = clamp(index - 1); render(); };
-  const goNext = (e) => { e?.preventDefault(); index = clamp(index + 1); render(); };
+  const goPrev = (e) => { e?.preventDefault(); e?.stopPropagation(); index = clamp(index - 1); render(); };
+  const goNext = (e) => { e?.preventDefault(); e?.stopPropagation(); index = clamp(index + 1); render(); };
 
   prev.addEventListener('click', goPrev, { passive: false });
   next.addEventListener('click', goNext, { passive: false });
@@ -166,9 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dx < -T) index = clamp(index + 1);
     render();
   });
-
-  // Re-evaluate slide count after all images finish loading (safety)
-  window.addEventListener('load', () => { getSlides(); if (slides <= 1) { prev.style.display = next.style.display = 'none'; } });
 
   render();
 });
