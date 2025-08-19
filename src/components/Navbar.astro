@@ -1,0 +1,216 @@
+---
+interface Props {
+  logoSrc: string;
+  logoAlt?: string;
+  bookHref?: string;
+}
+
+const {
+  logoSrc,
+  logoAlt = "Nandini Jungle by Hanging Gardens",
+  bookHref = "#",
+} = Astro.props;
+---
+
+<!-- Start in OVERLAY mode -->
+<header id="siteHeader" class="fixed top-0 inset-x-0 z-50 bg-black/40 border-b border-transparent transition-all duration-300">
+  <div class="px-2 sm:px-4">
+    <div id="headerRow" class="grid grid-cols-3 items-center py-6 md:px-8 transition-all duration-300">
+      <!-- LEFT: MENU -->
+      <div class="flex items-center">
+        <button
+          id="openMenuBtn"
+          type="button"
+          aria-label="Open menu"
+          aria-controls="menuPanel"
+          aria-expanded="false"
+          class="flex items-center gap-2 font-bold text-white hover:opacity-90 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px] text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+          <span class="text-sm tracking-wide">MENU</span>
+        </button>
+      </div>
+
+      <!-- CENTER: Logo (bigger + inverted in overlay) -->
+      <div class="flex justify-center">
+        <a href="/" class="inline-flex items-center">
+          <img
+            id="logoImg"
+            src={logoSrc}
+            alt={logoAlt}
+            class="h-16 md:h-20 w-auto select-none brightness-0 invert transition-all duration-300"
+            loading="lazy"
+            decoding="async"
+          />
+        </a>
+      </div>
+
+      <!-- RIGHT: BOOK NOW (white in overlay; slate-700 text) -->
+      <div class="flex justify-end">
+        <a
+          id="bookBtn"
+          href={bookHref}
+          class="inline-flex items-center justify-center h-9 md:h-10 px-4 md:px-5 text-sm font-semibold uppercase tracking-wide bg-white ring-1 ring-white/40 text-slate-700 transition-colors duration-200"
+        >
+          BOOK NOW
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ===== Backdrop (covers navbar) ===== -->
+<div id="menuBackdrop" class="fixed inset-0 z-[60] bg-black/40 opacity-0 pointer-events-none transition-opacity duration-200"></div>
+
+<!-- ===== Sidebar Panel ===== -->
+<aside
+  id="menuPanel"
+  class="fixed left-0 top-0 z-[70] h-full w-[320px] max-w-[85vw] bg-white shadow-xl -translate-x-full transition-transform duration-300 will-change-transform"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <!-- Close button (top-right) -->
+  <button id="closeMenuBtn" aria-label="Close menu" class="absolute right-3 top-3 p-2 text-slate-500 hover:text-slate-800">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+    </svg>
+  </button>
+
+  <!-- Drawer content (sample; replace with your links) -->
+  <div class="px-6 pt-8 pb-8 overflow-y-auto h-full">
+    <img src={logoSrc} alt={logoAlt} class="h-10 w-auto mb-6" loading="lazy" decoding="async" />
+    <hr class="border-gray-200 mb-6" />
+    <nav class="space-y-5 text-sm tracking-wide text-slate-800">
+      <a href="/" class="block hover:text-slate-900">HOME</a>
+      <a href="/holy-river" class="block hover:text-slate-900">HOLY RIVER</a>
+      <details class="group">
+        <summary class="cursor-pointer list-none hover:text-slate-900 flex items-center justify-between">
+          OFFERS & EXPERIENCES
+          <span class="ml-3 transition-transform group-open:rotate-180">▾</span>
+        </summary>
+        <div class="mt-3 ml-3 space-y-3">
+          <a href="/offers/summer" class="block hover:text-slate-900">Summer Offer</a>
+          <a href="/offers/spa" class="block hover:text-slate-900">Spa</a>
+        </div>
+      </details>
+      <a href="/villas" class="block hover:text-slate-900">VILLA SUITES & VILLAS</a>
+      <a href="/little-things" class="block hover:text-slate-900">THE LITTLE THINGS</a>
+      <a href="/contact" class="block hover:text-slate-900">CONTACT</a>
+    </nav>
+  </div>
+</aside>
+
+<script is:inline>
+  const header    = document.getElementById('siteHeader');
+  const row       = document.getElementById('headerRow');
+  const logo      = document.getElementById('logoImg');
+  const bookBtn   = document.getElementById('bookBtn');
+  const menuBtn   = document.getElementById('openMenuBtn');
+
+  const panel     = document.getElementById('menuPanel');
+  const backdrop  = document.getElementById('menuBackdrop');
+  const closeBtn  = document.getElementById('closeMenuBtn');
+
+  if (!header || !row || !logo || !bookBtn || !menuBtn || !panel || !backdrop || !closeBtn) {
+    console.warn('[Navbar] Missing required elements. Check IDs.');
+  } else {
+    const menuIcon  = menuBtn.querySelector('svg');
+    const menuText  = menuBtn.querySelector('span');
+
+    const brown      = '#A67C3D';
+    const brownHover = '#8F6B34';
+    const slate700   = '#334155'; // text-slate-700
+
+    /* ---------- Scroll/overlay styling ---------- */
+    function setSolid() {
+      header.classList.remove('bg-black/50', 'backdrop-blur', 'border-transparent');
+      header.classList.add('bg-white', 'border-b', 'border-gray-200', 'shadow-[0_1px_6px_rgba(0,0,0,0.06)]');
+
+      row.classList.remove('py-6');
+      row.classList.add('py-3');
+      logo.classList.remove('h-16','md:h-20','brightness-0','invert');
+      logo.classList.add('h-12','md:h-14');
+
+      menuText.classList.remove('text-white');
+      menuText.classList.add('text-slate-700');
+      if (menuIcon) { menuIcon.classList.remove('text-white'); menuIcon.classList.add('text-slate-700'); }
+
+      bookBtn.classList.remove('bg-white','ring-1','ring-white/40');
+      bookBtn.style.backgroundColor = brown;
+      bookBtn.style.color = '#ffffff';
+      bookBtn.onmouseenter = () => { bookBtn.style.backgroundColor = brownHover; bookBtn.style.color = '#ffffff'; };
+      bookBtn.onmouseleave = () => { bookBtn.style.backgroundColor = brown;       bookBtn.style.color = '#ffffff'; };
+    }
+
+    function setOverlay() {
+      header.classList.remove('bg-white','shadow-[0_1px_6px_rgba(0,0,0,0.06)]','border-gray-200');
+      header.classList.add('bg-black/50','backdrop-blur','border-b','border-transparent');
+
+      row.classList.remove('py-3');
+      row.classList.add('py-6');
+      logo.classList.remove('h-12','md:h-14');
+      logo.classList.add('h-16','md:h-20','brightness-0','invert');
+
+      menuText.classList.remove('text-slate-700');
+      menuText.classList.add('text-white');
+      if (menuIcon) { menuIcon.classList.remove('text-slate-700'); menuIcon.classList.add('text-white'); }
+
+      bookBtn.classList.add('bg-white','ring-1','ring-white/40');
+      bookBtn.style.backgroundColor = '#ffffff';
+      bookBtn.style.color = slate700;
+      bookBtn.onmouseenter = () => { bookBtn.style.backgroundColor = brown; bookBtn.style.color = '#ffffff'; };
+      bookBtn.onmouseleave = () => { bookBtn.style.backgroundColor = '#ffffff'; bookBtn.style.color = slate700; };
+    }
+
+    let lastState = null;
+    const updateHeader = () => {
+      const atTop = window.scrollY <= 1;
+      const state = atTop ? 'overlay' : 'solid';
+      if (state === lastState) return;
+      lastState = state;
+      (atTop ? setOverlay : setSolid)();
+    };
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => { updateHeader(); ticking = false; });
+        ticking = true;
+      }
+    }, { passive: true });
+
+    /* ---------- Sidebar open/close ---------- */
+    const openPanel = () => {
+      panel.classList.remove('-translate-x-full');
+      backdrop.classList.remove('opacity-0','pointer-events-none');
+      document.body.classList.add('overflow-hidden');
+      menuBtn.setAttribute('aria-expanded', 'true');
+      panel.setAttribute('aria-hidden', 'false');
+      // Focus the first focusable element in panel
+      setTimeout(() => {
+        const first = panel.querySelector('button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        (first || panel).focus();
+      }, 10);
+    };
+
+    const closePanel = () => {
+      panel.classList.add('-translate-x-full');
+      backdrop.classList.add('opacity-0','pointer-events-none');
+      document.body.classList.remove('overflow-hidden');
+      menuBtn.setAttribute('aria-expanded', 'false');
+      panel.setAttribute('aria-hidden', 'true');
+      menuBtn.focus();
+    };
+
+    menuBtn.addEventListener('click', openPanel);
+    closeBtn.addEventListener('click', closePanel);
+    backdrop.addEventListener('click', closePanel);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
+
+    /* ---------- Init ---------- */
+    window.addEventListener('load', updateHeader);
+    updateHeader();
+  }
+</script>
