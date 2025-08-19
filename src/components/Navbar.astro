@@ -33,19 +33,21 @@ const {
         </button>
       </div>
 
-      <!-- CENTER: Logo (bigger + inverted in overlay) -->
-      <div class="flex justify-center">
-        <a href="/" class="inline-flex items-center">
-          <img
+<!-- CENTER: Logo -->
+<div class="flex justify-center">
+  <a href="/" class="inline-flex items-center">
+    <img
       id="logoImg"
       src={logoSrc}
       alt={logoAlt}
+      width="160" height="80"
       class="h-16 md:h-20 w-auto select-none brightness-0 invert transition-all duration-300"
-      loading="lazy"
+      fetchpriority="high"
       decoding="async"
     />
-        </a>
-      </div>
+  </a>
+</div>
+
 
       <!-- RIGHT: BOOK NOW (white in overlay; slate-700 text) -->
       <div class="flex justify-end">
