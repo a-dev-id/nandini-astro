@@ -84,14 +84,16 @@ const params = new URLSearchParams({
     />
 
     <div class="absolute inset-0 overflow-hidden">
+      <!-- LAZY iframe: note data-src + fade-in -->
       <iframe
-        src={`https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`}
+        data-src={`https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`}
         title=""
-        class="yt-bg pointer-events-none select-none"
+        class="yt-bg pointer-events-none select-none opacity-0 transition-opacity duration-700"
         tabindex="-1"
         aria-hidden="true"
         allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
         allowfullscreen
+        loading="lazy"
       ></iframe>
     </div>
 
@@ -165,4 +167,32 @@ const params = new URLSearchParams({
 
     update();
   }
+
+  // Lazy load YouTube iframe on view
+  (function lazyYouTube() {
+    const iframe = document.querySelector('iframe[data-src].yt-bg');
+    if (!iframe) return;
+
+    const loadIframe = () => {
+      if (iframe.getAttribute('src')) return; // already loaded
+      iframe.src = iframe.dataset.src;
+      iframe.onload = () => iframe.classList.remove('opacity-0');
+    };
+
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            loadIframe();
+            io.disconnect();
+            break;
+          }
+        }
+      }, { rootMargin: '200px 0px' }); // pre-load just before entering
+      io.observe(iframe);
+    } else {
+      // Fallback: load shortly after DOM ready
+      setTimeout(loadIframe, 1200);
+    }
+  })();
 </script>
