@@ -1,225 +1,175 @@
 ---
 import groq from 'groq'
-import {sanity} from '../lib/sanity.js'
-import {urlFor} from '../lib/image.js'
+import { sanity } from '../lib/sanity.js'
+import { urlFor } from '../lib/image.js'
 
-// Props (images can still be passed in; Sanity is used only if not provided)
-const {
-  videoId,
-  start = 0,
-  posterSrc = "/images/hero-fallback.jpg",
-  images: imagesProp
-} = Astro.props
+const { videoId: videoIdProp, start: startProp, posterSrc: posterProp } = Astro.props
 
-let images = imagesProp
+const videoId = videoIdProp ?? '_5UK8EXcrAY'
+const start   = startProp   ?? 0
+const posterSrc = posterProp ?? '/images/hero-fallback.jpg'
 
-if (!images || images.length === 0) {
-  try {
-    const data = await sanity.fetch(
-      groq`*[_id == "homeCarousel"][0]{ slides[]{..., "alt": coalesce(alt, "")} }`
-    )
-    const fromSanity = (data?.slides ?? []).map((img, i) => ({
-      src: urlFor(img).width(1600).format('webp').quality(70).url(),
-      alt: img.alt || `Slide ${i + 1}`
-    }))
-    images = fromSanity
-  } catch (e) {
-    console.error('Sanity fetch failed:', e)
-  }
+let images: {src:string; alt:string}[] = []
+try {
+  const data = await sanity.fetch(
+    groq`*[_id == "homeCarousel"][0]{ slides[]{..., "alt": coalesce(alt, "")} }`
+  )
+  images = (data?.slides ?? []).map((img:any, i:number) => ({
+    src: urlFor(img).width(1920).format('webp').quality(70).url(),
+    alt: img.alt || `Slide ${i+1}`,
+  }))
+} catch (e) {
+  console.error('Sanity fetch failed:', e)
 }
-
-const params = new URLSearchParams({
-  autoplay: "1",
-  mute: "1",
-  loop: "1",
-  playlist: videoId,
-  playsinline: "1",
-  controls: "0",
-  rel: "0",
-  modestbranding: "1",
-  iv_load_policy: "3",
-  start: String(start),
-})
 ---
-
-<!-- Full-bleed on sm+ (breaks out of centered wrappers) -->
 <section class="relative overflow-hidden sm:ml-[calc(50%-50vw)] sm:mr-[calc(50%-50vw)] sm:w-screen">
   <!-- MOBILE: 4:5 image carousel -->
   <div class="relative block aspect-[4/5] w-full sm:hidden">
-    <!-- track -->
     <div id="mTrack" class="absolute inset-0 flex h-full w-full transition-transform duration-500 ease-out will-change-transform">
       {images.map((img, i) => (
-        <img
-          src={img.src}
-          alt={img.alt ?? `Slide ${i + 1}`}
-          loading={i === 0 ? "eager" : "lazy"}
-          fetchpriority={i === 0 ? "high" : "auto"}
-          decoding="async"
-          class="h-full w-full shrink-0 object-cover"
-        />
+        <div class="slide h-full w-full shrink-0 basis-full" aria-hidden={i===0 ? "false":"true"}>
+          <img
+            src={img.src}
+            alt={img.alt}
+            loading={i === 0 ? "eager" : "lazy"}
+            fetchpriority={i === 0 ? "high" : "auto"}
+            decoding="async"
+            class="h-full w-full object-cover"
+          />
+        </div>
       ))}
     </div>
 
-    <!-- arrows -->
-    <button id="mPrev"
-      aria-label="Previous slide"
+    <button id="mPrev" aria-label="Previous slide"
       class="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 backdrop-blur hover:bg-black/60 active:scale-95">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
       </svg>
     </button>
-    <button id="mNext"
-      aria-label="Next slide"
+    <button id="mNext" aria-label="Next slide"
       class="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 backdrop-blur hover:bg-black/60 active:scale-95">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
       </svg>
     </button>
 
-    <!-- top band + hairline under navbar -->
     <div class="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/55 to-transparent"></div>
     <div class="pointer-events-none absolute inset-x-0 top-0 h-px" style="background: rgba(255,255,255,.15);"></div>
   </div>
 
-  <!-- TABLET+ : full-screen background video, unclickable -->
-  <div class="relative hidden h-[100svh] w-screen overflow-hidden sm:block">
-    <img
-      src={posterSrc}
-      alt=""
-      loading="eager"
-      fetchpriority="high"
-      decoding="async"
-      class="absolute inset-0 h-full w-full object-cover"
-    />
+<!-- TABLET+ : full-screen background video -->
+<div class="relative hidden h-[100svh] w-screen overflow-hidden sm:block">
+  <!-- Poster (shows while video loads or if autoplay blocked) -->
+  <img
+    src={posterSrc}
+    alt=""
+    loading="eager"
+    fetchpriority="high"
+    decoding="async"
+    class="absolute inset-0 h-full w-full object-cover"
+  />
 
-    <div class="absolute inset-0 overflow-hidden">
-      <!-- LAZY iframe: data-src + JS API + fade-in -->
-      <iframe
-        data-src={`https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}&enablejsapi=1`}
-        title=""
-        class="yt-bg pointer-events-none select-none opacity-0 transition-opacity duration-700"
-        tabindex="-1"
-        aria-hidden="true"
-        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-        allowfullscreen
-        loading="lazy"
-      ></iframe>
-    </div>
+  <!-- YouTube background -->
+  <iframe
+    class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+    style="
+      width:100vw;            /* base */
+      height:56.25vw;         /* 9/16 of width */
+      min-width:177.78vh;     /* 16/9 of height (cover tall screens) */
+      min-height:100svh;      /* at least viewport height */
+      border:0;
+      pointer-events:none;    /* make it untouchable */
+    "
+    src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${videoId}&start=${start}`}
+    title="Background video"
+    allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+    allowfullscreen
+  ></iframe>
 
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/55 to-transparent"></div>
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-px" style="background: rgba(255,255,255,.15);"></div>
-  </div>
+  <!-- dark fade under navbar -->
+  <div class="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/55 to-transparent"></div>
+  <div class="pointer-events-none absolute inset-x-0 top-0 h-px" style="background: rgba(255,255,255,.15);"></div>
+</div>
+
 </section>
 
 <style>
-  /* Robust 16:9 cover for the iframe (no gutters) */
-  .yt-bg{
+  /* Make the injected YouTube iframe behave like a background cover */
+  .yt-bg iframe{
     position:absolute;
     top:50%;
     left:50%;
     transform:translate(-50%,-50%);
     width:100vw;
     height:56.25vw;     /* 9/16 of width */
-    min-width:177.78vh; /* 16/9 of height to ensure cover when taller */
-    min-height:100svh;  /* at least full viewport height */
+    min-width:177.78vh; /* 16/9 of height (cover tall) */
+    min-height:100svh;  /* at least viewport height */
   }
 </style>
 
 <script is:inline>
-  // Mobile carousel logic (no dependencies)
+document.addEventListener('DOMContentLoaded', () => {
+  /* ---------- Mobile carousel (<=640px) ---------- */
+  // Only bind when the mobile carousel is visible
+  if (window.matchMedia('(min-width: 640px)').matches) return;
+
   const track = document.getElementById('mTrack');
   const prev  = document.getElementById('mPrev');
   const next  = document.getElementById('mNext');
+  if (!track || !prev || !next) return;
 
-  if (track && prev && next) {
-    const slides = track.children.length;
-    let index = 0;
+  // Make sure buttons sit above everything and receive clicks
+  [prev, next].forEach((b) => {
+    b.style.zIndex = '50';
+    b.style.pointerEvents = 'auto';
+  });
 
-    const update = () => {
-      track.style.transform = `translateX(-${index * 100}%)`;
-    };
+  // Help swipe work consistently
+  track.style.touchAction = 'pan-y';
+  track.style.willChange  = 'transform';
 
-    prev.addEventListener('click', () => {
-      index = (index - 1 + slides) % slides;
-      update();
-    });
+  // Compute slides (and re-check after images load, just in case)
+  let slides = track.querySelectorAll('.slide').length;
+  const getSlides = () => (slides = track.querySelectorAll('.slide').length);
 
-    next.addEventListener('click', () => {
-      index = (index + 1) % slides;
-      update();
-    });
-
-    // Touch swipe
-    let startX = 0, dx = 0, touching = false;
-    track.addEventListener('touchstart', (e) => {
-      touching = true;
-      startX = e.touches[0].clientX;
-      dx = 0;
-    }, { passive: true });
-
-    track.addEventListener('touchmove', (e) => {
-      if (!touching) return;
-      dx = e.touches[0].clientX - startX;
-    }, { passive: true });
-
-    track.addEventListener('touchend', () => {
-      if (!touching) return;
-      touching = false;
-      const threshold = 40; // px
-      if (dx > threshold) {
-        index = (index - 1 + slides) % slides;
-      } else if (dx < -threshold) {
-        index = (index + 1) % slides;
-      }
-      update();
-    });
-
-    update();
+  if (slides <= 1) {
+    // nothing to slide
+    prev.style.display = next.style.display = 'none';
+    return;
   }
 
-  // Lazy load YouTube iframe on view + reliable autoplay
-  (function lazyYouTube() {
-    const iframe = document.querySelector('iframe[data-src].yt-bg');
-    if (!iframe) return;
+  let index = 0;
+  const clamp  = (i) => (i + slides) % slides;
+  const render = () => {
+    track.style.transform = `translateX(-${index * 100}%)`;
+  };
 
-    const pokePlay = () => {
-      try {
-        iframe.contentWindow?.postMessage(
-          JSON.stringify({ event: "command", func: "playVideo", args: [] }),
-          "*"
-        );
-      } catch {}
-    };
+  const goPrev = (e) => { e?.preventDefault(); index = clamp(index - 1); render(); };
+  const goNext = (e) => { e?.preventDefault(); index = clamp(index + 1); render(); };
 
-    const reveal = () => iframe.classList.remove('opacity-0');
+  prev.addEventListener('click', goPrev, { passive: false });
+  next.addEventListener('click', goNext, { passive: false });
 
-    const loadIframe = () => {
-      if (iframe.getAttribute('src')) return; // already loaded
-      iframe.src = iframe.dataset.src;
-      iframe.addEventListener('load', () => { reveal(); pokePlay(); }, { once: true });
-      setTimeout(() => { reveal(); pokePlay(); }, 800);
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) pokePlay();
-      }, { once: true });
-      window.addEventListener('focus', pokePlay, { once: true });
-    };
+  // Keyboard a11y
+  [prev, next].forEach(btn => btn.setAttribute('tabindex', '0'));
+  prev.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') goPrev(e); });
+  next.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') goNext(e); });
 
-    const inViewport = () => {
-      const r = iframe.getBoundingClientRect();
-      return r.top < innerHeight && r.bottom > 0 && r.left < innerWidth && r.right > 0;
-    };
+  // Touch swipe
+  let startX = 0, dx = 0, touching = false;
+  track.addEventListener('touchstart', (e) => { touching = true; startX = e.touches[0].clientX; dx = 0; }, { passive: true });
+  track.addEventListener('touchmove',  (e) => { if (!touching) return; dx = e.touches[0].clientX - startX; }, { passive: true });
+  track.addEventListener('touchend',   ()   => {
+    if (!touching) return; touching = false;
+    const T = 40; // px
+    if (dx >  T) index = clamp(index - 1);
+    if (dx < -T) index = clamp(index + 1);
+    render();
+  });
 
-    if (inViewport()) {
-      loadIframe();
-    } else if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver((entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) { loadIframe(); io.disconnect(); break; }
-        }
-      }, { rootMargin: '200px 0px' });
-      io.observe(iframe);
-    } else {
-      setTimeout(loadIframe, 1200);
-    }
-  })();
+  // Re-evaluate slide count after all images finish loading (safety)
+  window.addEventListener('load', () => { getSlides(); if (slides <= 1) { prev.style.display = next.style.display = 'none'; } });
+
+  render();
+});
 </script>
