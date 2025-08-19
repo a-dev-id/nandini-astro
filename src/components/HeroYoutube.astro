@@ -1,8 +1,5 @@
 ---
-interface Img {
-  src: string;
-  alt?: string;
-}
+interface Img { src: string; alt?: string; }
 interface Props {
   videoId: string;             // e.g. "9_9ppP8KUfg"
   start?: number;
@@ -45,7 +42,8 @@ const params = new URLSearchParams({
         <img
           src={img.src}
           alt={img.alt ?? `Slide ${i + 1}`}
-          loading="lazy"
+          loading={i === 0 ? "eager" : "lazy"}
+          fetchpriority={i === 0 ? "high" : "auto"}
           decoding="async"
           class="h-full w-full shrink-0 object-cover"
         />
@@ -78,15 +76,16 @@ const params = new URLSearchParams({
     <img
       src={posterSrc}
       alt=""
-      loading="lazy"
+      loading="eager"
+      fetchpriority="high"
       decoding="async"
       class="absolute inset-0 h-full w-full object-cover"
     />
 
     <div class="absolute inset-0 overflow-hidden">
-      <!-- LAZY iframe: note data-src + fade-in -->
+      <!-- LAZY iframe: data-src + JS API + fade-in -->
       <iframe
-        data-src={`https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`}
+        data-src={`https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}&enablejsapi=1`}
         title=""
         class="yt-bg pointer-events-none select-none opacity-0 transition-opacity duration-700"
         tabindex="-1"
@@ -146,12 +145,12 @@ const params = new URLSearchParams({
       touching = true;
       startX = e.touches[0].clientX;
       dx = 0;
-    }, {passive:true});
+    }, { passive: true });
 
     track.addEventListener('touchmove', (e) => {
       if (!touching) return;
       dx = e.touches[0].clientX - startX;
-    }, {passive:true});
+    }, { passive: true });
 
     track.addEventListener('touchend', () => {
       if (!touching) return;
@@ -168,30 +167,49 @@ const params = new URLSearchParams({
     update();
   }
 
-  // Lazy load YouTube iframe on view
+  // Lazy load YouTube iframe on view + reliable autoplay
   (function lazyYouTube() {
     const iframe = document.querySelector('iframe[data-src].yt-bg');
     if (!iframe) return;
 
+    const pokePlay = () => {
+      try {
+        iframe.contentWindow?.postMessage(
+          JSON.stringify({ event: "command", func: "playVideo", args: [] }),
+          "*"
+        );
+      } catch {}
+    };
+
+    const reveal = () => iframe.classList.remove('opacity-0');
+
     const loadIframe = () => {
       if (iframe.getAttribute('src')) return; // already loaded
       iframe.src = iframe.dataset.src;
-      iframe.onload = () => iframe.classList.remove('opacity-0');
+      // onload isn't guaranteed by YT, so nudge multiple times
+      iframe.addEventListener('load', () => { reveal(); pokePlay(); }, { once: true });
+      setTimeout(() => { reveal(); pokePlay(); }, 800);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) pokePlay();
+      }, { once: true });
+      window.addEventListener('focus', pokePlay, { once: true });
     };
 
-    if ('IntersectionObserver' in window) {
+    const inViewport = () => {
+      const r = iframe.getBoundingClientRect();
+      return r.top < innerHeight && r.bottom > 0 && r.left < innerWidth && r.right > 0;
+    };
+
+    if (inViewport()) {
+      loadIframe();
+    } else if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            loadIframe();
-            io.disconnect();
-            break;
-          }
+        for (const e of entries) {
+          if (e.isIntersecting) { loadIframe(); io.disconnect(); break; }
         }
-      }, { rootMargin: '200px 0px' }); // pre-load just before entering
+      }, { rootMargin: '200px 0px' });
       io.observe(iframe);
     } else {
-      // Fallback: load shortly after DOM ready
       setTimeout(loadIframe, 1200);
     }
   })();
