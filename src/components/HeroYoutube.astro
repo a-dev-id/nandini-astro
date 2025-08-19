@@ -1,22 +1,32 @@
 ---
-interface Img { src: string; alt?: string; }
-interface Props {
-  videoId: string;             // e.g. "9_9ppP8KUfg"
-  start?: number;
-  posterSrc?: string;
-  images?: Img[];              // exactly 3 for mobile carousel
-}
+import groq from 'groq'
+import {sanity} from '../lib/sanity.js'
+import {urlFor} from '../lib/image.js'
 
+// Props (images can still be passed in; Sanity is used only if not provided)
 const {
   videoId,
   start = 0,
   posterSrc = "/images/hero-fallback.jpg",
-  images = [
-    { src: "/images/mobile-1.jpg", alt: "Slide 1" },
-    { src: "/images/mobile-2.jpg", alt: "Slide 2" },
-    { src: "/images/mobile-3.jpg", alt: "Slide 3" },
-  ],
-} = Astro.props;
+  images: imagesProp
+} = Astro.props
+
+let images = imagesProp
+
+if (!images || images.length === 0) {
+  try {
+    const data = await sanity.fetch(
+      groq`*[_id == "homeCarousel"][0]{ slides[]{..., "alt": coalesce(alt, "")} }`
+    )
+    const fromSanity = (data?.slides ?? []).map((img, i) => ({
+      src: urlFor(img).width(1600).format('webp').quality(70).url(),
+      alt: img.alt || `Slide ${i + 1}`
+    }))
+    images = fromSanity
+  } catch (e) {
+    console.error('Sanity fetch failed:', e)
+  }
+}
 
 const params = new URLSearchParams({
   autoplay: "1",
@@ -29,12 +39,12 @@ const params = new URLSearchParams({
   modestbranding: "1",
   iv_load_policy: "3",
   start: String(start),
-});
+})
 ---
 
 <!-- Full-bleed on sm+ (breaks out of centered wrappers) -->
 <section class="relative overflow-hidden sm:ml-[calc(50%-50vw)] sm:mr-[calc(50%-50vw)] sm:w-screen">
-  <!-- MOBILE: 4:3 image carousel -->
+  <!-- MOBILE: 4:5 image carousel -->
   <div class="relative block aspect-[4/5] w-full sm:hidden">
     <!-- track -->
     <div id="mTrack" class="absolute inset-0 flex h-full w-full transition-transform duration-500 ease-out will-change-transform">
@@ -108,10 +118,10 @@ const params = new URLSearchParams({
     top:50%;
     left:50%;
     transform:translate(-50%,-50%);
-    width:100vw;         /* fill viewport width */
-    height:56.25vw;      /* 9/16 of width */
-    min-width:177.78vh;  /* 16/9 of height to ensure cover when taller */
-    min-height:100svh;   /* at least full viewport height */
+    width:100vw;
+    height:56.25vw;     /* 9/16 of width */
+    min-width:177.78vh; /* 16/9 of height to ensure cover when taller */
+    min-height:100svh;  /* at least full viewport height */
   }
 </style>
 
@@ -186,7 +196,6 @@ const params = new URLSearchParams({
     const loadIframe = () => {
       if (iframe.getAttribute('src')) return; // already loaded
       iframe.src = iframe.dataset.src;
-      // onload isn't guaranteed by YT, so nudge multiple times
       iframe.addEventListener('load', () => { reveal(); pokePlay(); }, { once: true });
       setTimeout(() => { reveal(); pokePlay(); }, 800);
       document.addEventListener('visibilitychange', () => {
